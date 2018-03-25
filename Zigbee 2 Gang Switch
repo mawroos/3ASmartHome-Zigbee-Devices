@@ -13,11 +13,11 @@
  *  01/2017 corrected the temperature reading
  *  02/2017 added heartbeat to monitor connectivity health of outlet
  *  02/2017 added multiattribute tile
- *  03/2018 Fixed status updates comming from device
+ *  03/2018 Marwan - Fixed status updates comming from device
  */
 
 metadata {
-    definition (name: "ZigBee Gang 2 Switch", namespace: "smartthings", author: "smartthings") {
+    definition (name: "ZigBee Gang 2 Switch - Marwan V1", namespace: "smartthings", author: "smartthings") {
         capability "Actuator"
         capability "Configuration"
         capability "Refresh"
