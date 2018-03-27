@@ -13,11 +13,11 @@
  *  01/2017 corrected the temperature reading
  *  02/2017 added heartbeat to monitor connectivity health of outlet
  *  02/2017 added multiattribute tile
- *  03/2018 Marwan - Fixed status updates comming from device
+ *  03/2018 Fixed status updates comming from device
  */
 
 metadata {
-    definition (name: "ZigBee Gang 2 Switch - Marwan V1", namespace: "smartthings", author: "smartthings") {
+    definition (name: "ZigBee Gang 2 Switch", namespace: "smartthings", author: "smartthings") {
         capability "Actuator"
         capability "Configuration"
         capability "Refresh"
@@ -27,8 +27,8 @@ metadata {
         capability "Temperature Measurement"
         
         attribute "lastCheckin", "string"
-        attribute "switch0", "string"
         attribute "switch", "string"
+        attribute "switch1", "string"
     	attribute "switch2", "string"
         command "on0"
     command "off0"
@@ -52,23 +52,23 @@ metadata {
     }
 
     tiles(scale: 2) {
-     multiAttributeTile(name:"switch0", type: "device.switch", width: 6, height: 4, canChangeIcon: true){
+     multiAttributeTile(name:"switch", type: "device.switch", width: 6, height: 4, canChangeIcon: true){
             tileAttribute ("device.switch", key: "PRIMARY_CONTROL") { 
-                attributeState "on", label:'switch0', action:"off0", icon:"st.switches.light.on", backgroundColor:"#00a0dc", nextState:"turningOff"
-                attributeState "off", label:'switch0', action:"on0", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
-                attributeState "turningOn", label:'switch0', action:"off0", icon:"st.switches.light.on", backgroundColor:"#00a0dc", nextState:"turningOff"
-                attributeState "turningOff", label:'switch0', action:"on0", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
+                attributeState "on", label:'switch', action:"off0", icon:"st.switches.light.on", backgroundColor:"#00a0dc", nextState:"turningOff"
+                attributeState "off", label:'switch', action:"on0", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
+                attributeState "turningOn", label:'switch', action:"off0", icon:"st.switches.light.on", backgroundColor:"#00a0dc", nextState:"turningOff"
+                attributeState "turningOff", label:'switch', action:"on0", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
             }
            	tileAttribute("device.lastCheckin", key: "SECONDARY_CONTROL") {
     			attributeState("default", label:'Last Update: ${currentValue}',icon: "st.Health & Wellness.health9")
 		   	}
         }
-        multiAttributeTile(name:"switch", type: "device.switch", width: 6, height: 4, canChangeIcon: true){
+        multiAttributeTile(name:"switch1", type: "device.switch", width: 6, height: 4, canChangeIcon: true){
             tileAttribute ("device.switch", key: "PRIMARY_CONTROL") { 
-                attributeState "on", label:'switch', action:"off", icon:"st.switches.light.on", backgroundColor:"#00a0dc", nextState:"turningOff"
-                attributeState "off", label:'switch', action:"on", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
-                attributeState "turningOn", label:'switch', action:"off", icon:"st.switches.light.on", backgroundColor:"#00a0dc", nextState:"turningOff"
-                attributeState "turningOff", label:'switch', action:"on", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
+                attributeState "on", label:'switch1', action:"off", icon:"st.switches.light.on", backgroundColor:"#00a0dc", nextState:"turningOff"
+                attributeState "off", label:'switch1', action:"on", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
+                attributeState "turningOn", label:'switch1', action:"off", icon:"st.switches.light.on", backgroundColor:"#00a0dc", nextState:"turningOff"
+                attributeState "turningOff", label:'switch1', action:"on", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
             }
            	tileAttribute("device.lastCheckin", key: "SECONDARY_CONTROL") {
     			attributeState("default", label:'Last Update: ${currentValue}',icon: "st.Health & Wellness.health9")
@@ -93,8 +93,8 @@ metadata {
         standardTile("refresh", "device.refresh", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
             state "default", label:"", action:"refresh.refresh", icon:"st.secondary.refresh"
             }
-       main(["switch0"])
-        details(["switch","switch2", "refresh"])
+       main(["switch"])
+        details(["switch1","switch2", "refresh"])
     }
 }
 
@@ -147,9 +147,9 @@ private Map parseCatchAllMessage(String description) {
         log.debug "Its Switch one"
     	def onoff = cluster.data[-1]
         if (onoff == 1)
-        	resultMap = createEvent(name: "switch", value: "on")
+        	resultMap = createEvent(name: "switch1", value: "on")
         else if (onoff == 0)
-            resultMap = createEvent(name: "switch", value: "off")
+            resultMap = createEvent(name: "switch1", value: "off")
             }
             else if (cluster.sourceEndpoint == 0x11)
             {
@@ -186,13 +186,13 @@ private Map parseReportAttributeMessage(String description) {
 
 def off() {
     log.debug "off()"
-	sendEvent(name: "switch", value: "off")
+	sendEvent(name: "switch1", value: "off")
    	"st cmd 0x${device.deviceNetworkId} 0x10 0x0006 0x0 {}" 
   }
 
 def on() {
    log.debug "on()"
-	sendEvent(name: "switch", value: "on")
+	sendEvent(name: "switch1", value: "on")
     "st cmd 0x${device.deviceNetworkId} 0x10 0x0006 0x1 {}" 
     }
 def off2() {
@@ -209,14 +209,14 @@ def on2() {
     
 def off0() {
     log.debug "off0()"
-	sendEvent(name: "switch0", value: "off")
+	sendEvent(name: "switch", value: "off")
     "st cmd 0x${device.deviceNetworkId} 0xFF 0x0006 0x0 {}" 
    // "st cmd 0x${device.deviceNetworkId} 0x11 0x0006 0x0 {}" 
    }
 
 def on0() {
    log.debug "on0()"
-	sendEvent(name: "switch0", value: "on")
+	sendEvent(name: "switch", value: "on")
     "st cmd 0x${device.deviceNetworkId} 0xFF 0x0006 0x1 {}" 
  //   "st cmd 0x${device.deviceNetworkId} 0x11 0x0006 0x1 {}" 
     }
