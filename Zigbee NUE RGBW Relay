@@ -1,0 +1,147 @@
+/** Please copy the Device Handler from this line
+ *  Copyright 2016 SmartThings
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *  Updated by Kevin X- 3A Smart Home on 1st Jun 2018
+ *  Adapted for Hubitat, also added Momentary capability / Push Command by stephen@elves.name 3rd December 2019  
+ *
+ */
+
+metadata {
+    definition (name: "3A NUE ZigBee RGBW Light", namespace: "3A", author: "Kevin X- 3A Smart Home") {
+
+        capability "Actuator"
+        capability "Color Control"
+        capability "Color Temperature"
+        capability "Configuration"
+        capability "Polling"
+        capability "Refresh"
+        capability "Switch"
+        capability "Switch Level"
+        capability "Momentary"
+
+        fingerprint profileId: "C05E", inClusters: "0000, 0003, 0004, 0005, 0006, 0008, 0300, 1000", outClusters: "0019", "manufacturer":"Feibit Inc co.", "model":"FZB56-ZCW27LX1.0", deviceJoinName: "Nue RGBW Downlight"
+        fingerprint profileId: "C05E", inClusters: "0000, 0003, 0004, 0005, 0006, 0008, 0300, 1000", outClusters: "0019", "manufacturer":"3A Smart Home DE", "model":"NUET56-DL27LX1.1", deviceJoinName: "Nue RGBW Downlight"
+        fingerprint profileId: "C05E", inClusters: "0000, 0003, 0004, 0005, 0006, 0008, 0300, 1000", outClusters: "0019", "manufacturer":"Feibit", "model":"FNB56-ZCW25FB1.9", deviceJoinName: "Nue RGBW Strip Light"
+        fingerprint profileId: "C05E", inClusters: "0000, 0003, 0004, 0005, 0006, 0008, 0300, 1000", outClusters: "0019", "manufacturer":"FeeBit RGBW", "model":"FB56-ZCW20FB1.2", deviceJoinName: "Nue RGB Strip Light"
+    }
+
+
+}
+
+//Globals
+private getATTRIBUTE_HUE() { 0x0000 }
+private getATTRIBUTE_SATURATION() { 0x0001 }
+private getHUE_COMMAND() { 0x00 }
+private getSATURATION_COMMAND() { 0x03 }
+private getCOLOR_CONTROL_CLUSTER() { 0x0300 }
+private getATTRIBUTE_COLOR_TEMPERATURE() { 0x0007 }
+
+// Parse incoming device messages to generate events
+def parse(String description) {
+    log.debug "description is $description"
+
+    def finalResult = zigbee.getEvent(description)
+    if (finalResult) {
+        log.debug finalResult
+        sendEvent(finalResult)
+    }
+    else {
+        def zigbeeMap = zigbee.parseDescriptionAsMap(description)
+        log.trace "zigbeeMap : $zigbeeMap"
+
+        if (zigbeeMap?.clusterInt == COLOR_CONTROL_CLUSTER) {
+            if(zigbeeMap.attrInt == ATTRIBUTE_HUE){  //Hue Attribute
+                def hueValue = Math.round(zigbee.convertHexToInt(zigbeeMap.value) / 255 * 360)
+                sendEvent(name: "hue", value: hueValue, displayed:false)
+            }
+            else if(zigbeeMap.attrInt == ATTRIBUTE_SATURATION){ //Saturation Attribute
+                def saturationValue = Math.round(zigbee.convertHexToInt(zigbeeMap.value) / 255 * 100)
+                sendEvent(name: "saturation", value: saturationValue, displayed:false)
+            }
+        }
+        else {
+            log.info "DID NOT PARSE MESSAGE for description : $description"
+        }
+    }
+}
+
+def on() {
+	//device.endpointId ="0B"
+    zigbee.on()// + ["delay 3"] + zigbee.off()
+}
+
+def off() {
+    //device.endpointId ="0B"
+    zigbee.off() //+ ["delay 20"] + zigbee.onOffRefresh()
+}
+
+def push() {
+    zigbee.on() + ["delay 3"] + zigbee.off()
+}
+
+def refresh() {
+    refreshAttributes() + configureAttributes()
+}
+
+def poll() {
+    refreshAttributes()
+}
+
+def configure() {
+    log.debug "Configuring Reporting and Bindings."
+    configureAttributes() + refreshAttributes()
+    setColor(5000)
+}
+
+def configureAttributes() {
+    zigbee.onOffConfig() + zigbee.levelConfig() + zigbee.colorTemperatureConfig() + zigbee.configureReporting(COLOR_CONTROL_CLUSTER, ATTRIBUTE_HUE, 0x20, 1, 3600, 0x01) + zigbee.configureReporting(COLOR_CONTROL_CLUSTER, ATTRIBUTE_SATURATION, 0x20, 1, 3600, 0x01)
+}
+
+def refreshAttributes() {
+    zigbee.onOffRefresh() + zigbee.levelRefresh() + zigbee.colorTemperatureRefresh() + zigbee.readAttribute(0x0300, 0x00) + zigbee.readAttribute(0x0300, ATTRIBUTE_HUE) + zigbee.readAttribute(0x0300, ATTRIBUTE_SATURATION)
+}
+
+def setColorTemperature(value) {
+    //device.endpointId ="0B"
+    zigbee.setColorTemperature(value)  + ["delay 10"] + zigbee.colorTemperatureRefresh()
+}
+
+def setLevel(value) {
+    //device.endpointId = "0B"
+    def additionalCmds = []
+    additionalCmds = refresh()
+    def hexConvertedValue = zigbee.convertToHexString(((value/100) * 255).intValue(),2)
+    zigbee.command(0x0008, 0x00, hexConvertedValue, "0000") + additionalCmds
+}
+/*def setLevel(value) {
+    //device.endpointId ="0B"
+    zigbee.setLevel(value) + ["delay 100"] + zigbee.levelRefresh()         
+}
+*/
+def setColor(value){
+    log.trace "setColor($value)"
+    //device.endpointId ="0B"
+    zigbee.on() + setHue(value.hue) + ["delay 100"] + setSaturation(value.saturation) + ["delay 100"]+ refreshAttributes()
+}
+
+def setHue(value) {
+    def scaledHueValue = zigbee.convertToHexString(Math.round(value * 0xfe / 100.0).intValue(), 2)
+    //device.endpointId ="0B"
+    zigbee.command(COLOR_CONTROL_CLUSTER, HUE_COMMAND, scaledHueValue, "00", "0100")      
+}
+
+def setSaturation(value) {
+    def scaledSatValue = zigbee.convertToHexString(Math.round(value * 0xfe / 100.0).intValue(), 2)
+    //device.endpointId ="0B"
+    zigbee.command(COLOR_CONTROL_CLUSTER, SATURATION_COMMAND, scaledSatValue, "0100")     
+    }
+    
+// Please copy the device handler end of this line
